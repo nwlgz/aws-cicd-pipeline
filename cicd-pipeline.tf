@@ -1,51 +1,48 @@
-resource "aws_codebuild_project" "tf-plan" {
-  name          = "tf-cicd-plan2"
-  description   = "Plan stage for terraform"
-  service_role  = aws_iam_role.tf-codebuild-role.arn
+# resource "aws_codebuild_project" "tf-plan" {
+#   name          = "tf-cicd-plan2"
+#   description   = "Plan stage for terraform"
+#   service_role  = aws_iam_role.tf-codebuild-role.arn
 
-  artifacts {
-    type = "CODEPIPELINE"
-  }
+#   artifacts {
+#     type = "CODEPIPELINE"
+#   }
 
-  environment {
-    compute_type                = "BUILD_GENERAL1_SMALL"
-    image                       = "hashicorp/terraform:0.14.3"
-    type                        = "LINUX_CONTAINER"
-    image_pull_credentials_type = "SERVICE_ROLE"
-    registry_credential{
-        credential = var.dockerhub_credentials
-        credential_provider = "SECRETS_MANAGER"
-    }
- }
- source {
-     type   = "CODEPIPELINE"
-     buildspec = file("buildspec/plan-buildspec.yml")
- }
-}
+#   environment {
+#     compute_type                = "BUILD_GENERAL1_SMALL"
+#     image                       = "aws/codebuild/amazonlinux2-x86_64-standard:4.0"
+#     type                        = "LINUX_CONTAINER"
+#     image_pull_credentials_type = "CODEBUILD"
+#     # image_pull_credentials_type = "SERVICE_ROLE"
+#     # registry_credential{
+#     #     credential = var.dockerhub_credentials
+#     #     credential_provider = "SECRETS_MANAGER"
+#     # }
+#  }
+#  source {
+#      type   = "CODEPIPELINE"
+#      buildspec = file("buildspec/plan-buildspec.yml")
+#  }
+# }
 
 resource "aws_codebuild_project" "tf-apply" {
-  name          = "tf-cicd-apply"
-  description   = "Apply stage for terraform"
-  service_role  = aws_iam_role.tf-codebuild-role.arn
+    name          = "tf-cicd-apply"
+    description   = "Apply stage for terraform"
+    service_role  = aws_iam_role.tf-codebuild-role.arn
 
-  artifacts {
-    type = "CODEPIPELINE"
-  }
-
-  environment {
-    compute_type                = "BUILD_GENERAL1_SMALL"
-    image                       = "hashicorp/terraform:0.14.3"
-    type                        = "LINUX_CONTAINER"
-    image_pull_credentials_type = "SERVICE_ROLE"
-    registry_credential{
-        credential = var.dockerhub_credentials
-        credential_provider = "SECRETS_MANAGER"
+    artifacts {
+        type = "CODEPIPELINE"
     }
- }
- source {
-     type   = "CODEPIPELINE"
-     buildspec = file("buildspec/apply-buildspec.yml")
- }
+
+    environment {
+        compute_type                = "BUILD_GENERAL1_SMALL"
+        image                       = "aws/codebuild/amazonlinux2-x86_64-standard:4.0"
+        type                        = "LINUX_CONTAINER"
+        image_pull_credentials_type = "CODEBUILD"
+    }
+    source {
+        type   = "CODEPIPELINE"
+        buildspec = file("buildspec/buildspec.yaml")
+    }
 }
 
 
@@ -69,7 +66,7 @@ resource "aws_codepipeline" "cicd_pipeline" {
             version = "1"
             output_artifacts = ["tf-code"]
             configuration = {
-                FullRepositoryId = "davoclock/aws-cicd-pipeline"
+                FullRepositoryId = "nwlgz/aws-cicd-pipeline"
                 BranchName   = "master"
                 ConnectionArn = var.codestar_connector_credentials
                 OutputArtifactFormat = "CODE_ZIP"
@@ -77,20 +74,20 @@ resource "aws_codepipeline" "cicd_pipeline" {
         }
     }
 
-    stage {
-        name ="Plan"
-        action{
-            name = "Build"
-            category = "Build"
-            provider = "CodeBuild"
-            version = "1"
-            owner = "AWS"
-            input_artifacts = ["tf-code"]
-            configuration = {
-                ProjectName = "tf-cicd-plan"
-            }
-        }
-    }
+    # stage {
+    #     name ="Plan"
+    #     action{
+    #         name = "Build"
+    #         category = "Build"
+    #         provider = "CodeBuild"
+    #         version = "1"
+    #         owner = "AWS"
+    #         input_artifacts = ["tf-code"]
+    #         configuration = {
+    #             ProjectName = "tf-cicd-plan"
+    #         }
+    #     }
+    # }
 
     stage {
         name ="Deploy"
