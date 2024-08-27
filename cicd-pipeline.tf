@@ -24,8 +24,21 @@
 #  }
 # }
 
+output "pipelines" {
+    value = var.pipelines
+}
+
+locals {
+  list_pipelines = { for p in var.pipelines : p.pipeline_name => p }
+}
+
+output "list_pipelines" {
+    value = local.list_pipelines
+}
+
 resource "aws_codebuild_project" "tf-apply" {
-    name          = "tf-cicd-apply"
+    for_each = local.list_pipelines
+    name          = "tf-cicd-apply-${each.key}"
     description   = "Apply stage for terraform"
     service_role  = aws_iam_role.tf-codebuild-role.arn
 
@@ -47,8 +60,8 @@ resource "aws_codebuild_project" "tf-apply" {
 
 
 resource "aws_codepipeline" "cicd_pipeline" {
-
-    name = "tf-cicd"
+    for_each = local.list_pipelines
+    name = "tf-cicd-${each.key}"
     role_arn = aws_iam_role.tf-codepipeline-role.arn
 
     artifact_store {
@@ -64,9 +77,10 @@ resource "aws_codepipeline" "cicd_pipeline" {
             owner = "AWS"
             provider = "CodeStarSourceConnection"
             version = "1"
-            output_artifacts = ["tf-code"]
+            output_artifacts = ["tf-code-${each.key}"]
             configuration = {
-                FullRepositoryId = "nwlgz/aws-cicd-pipeline"
+                #FullRepositoryId = "nwlgz/aws-cicd-pipeline"
+                FullRepositoryId = "nwlgz/${each.value.source_repo}"
                 BranchName   = "master"
                 ConnectionArn = var.codestar_connector_credentials
                 OutputArtifactFormat = "CODE_ZIP"
@@ -97,9 +111,9 @@ resource "aws_codepipeline" "cicd_pipeline" {
             provider = "CodeBuild"
             version = "1"
             owner = "AWS"
-            input_artifacts = ["tf-code"]
+            input_artifacts = ["tf-code-${each.key}"]
             configuration = {
-                ProjectName = "tf-cicd-apply"
+                ProjectName = "tf-cicd-apply-${each.key}"
             }
         }
     }
